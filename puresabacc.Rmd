@@ -1,5 +1,5 @@
 ---
-title: 'Pure Sabacc: Using R to solve the galaxy''s greatest card game'
+title: "Pure Sabacc: Using R to solve the galaxy's greatest card game"
 author: "Carter Richard"
 date: "12/31/2019"
 output: html_document
@@ -9,3 +9,4 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+*Sabacc* is an interesting bit of *Star Wars* lore. You might have heard of the game as Han Solo's method of choice for winning the *Millenium Falcon* from Lando Calrissian, but did you know that there are over 15 different variants of the galaxy's most popular card game? 
