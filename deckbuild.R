@@ -34,3 +34,5 @@ deck2 <- cbind(deck2, val2)
 colnames(deck2) <- c("card", "suit", "val")
 
 deck <- rbind(deck1, deck2)
+
+remove(cards1, cards2, i, j, suits1, suits2, val1, val2, deck1, deck2)
