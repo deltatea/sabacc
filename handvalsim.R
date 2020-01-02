@@ -34,7 +34,7 @@ ggplot(tot, aes(x = as.character(hand), y = val)) +
 
 
 ggplot(tot, aes(x = val, fill = as.character(hand))) +
-  geom_density(alpha = 0.1) +
+  geom_histogram(alpha = 0.5) +
   geom_vline(xintercept = 27, linetype = "dashed", color = "red") + 
   geom_vline(xintercept = -27, linetype = "dashed", color = "red") +
   labs(title = "Hand value likelihood by number of cards drawn in Sabacc",
