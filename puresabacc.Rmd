@@ -1,42 +1,52 @@
 ---
-title: "Pure Sabacc: Using R and Monte Carlo simulation to solve the galaxy's greatest card game"
+title: "Pure Sabacc: Monte Carlo simulation in R to play the galaxy's greatest card game"
 author: "Carter Richard"
 date: "12/31/2019"
 output: html_document
 ---
+![](solo.jpg)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(stats)
-
+library(knitr)
 ```
 
-*Sabacc* is an interesting bit of lore. It's steeped in the mythology of the *Star Wars* universe.  You might have heard of the game as Han Solo's method of choice for winning the *Millenium Falcon* from Lando Calrissian, but did you know that there are over 15 different variants of the galaxy's most popular card game?
 
-I set out to build this analysis after thinking about an assignment from my undergraduate days. In that class (PHY 315: Computational Physics), one of our first projects was to build a simulation of the cardgame Blackjack. 
+>"You've never heard of the *Millenium Falcon*? It's the ship that made the Kessel run in less than 12 parsecs."
 
-#Sabacc Rules
+Sabacc is an interesting bit of lore. It's steeped in the mythology of the *Star Wars* universe.  You might have heard of the game as Han Solo's method of choice for winning the *Millenium Falcon* from Lando Calrissian, but did you know that there are over 15 different variants of the fictional cardgame? And every version presents a similar image of randomness, subterfuge, and gambling: Sabacc is a game of chance.
+
+Or is it?
+
+I set out to build this analysis after thinking about an assignment from my undergraduate days. In that class (PHY 315: Computational Physics), one of our first projects was to build a simulation of the cardgame Blackjack. Back then, the functional simulation was as far as we went. But I thought it would be fun to try my hand (*heh*) at iterating a Sabacc simulation and see if there's any insight to be gained.
+
+# Sabacc Rules
+> It's not wise to upset a Wookie.
 
 We're going to use the standard rules for Sabacc as published on http://sabacc.sourceforge.net/rules. Here's a quick breakdown of how it works:
   
-  Sabacc is, simply explained, a hybrid of blackjack and poker. The game is played with a 76 card deck, which consists of four suits with values from 1-15 and additional set of face cards with values ranging from 0 to -17. The goal of the game is to achieve a hand with a total value as close to 23 or -23 as possible without going over.
+  Sabacc is a hybrid of blackjack and poker. The game is played with a 76 card deck, which consists of four suits with values from 1-15 and additional set of face cards with values ranging from 0 to -17. The goal of the game is to achieve a hand with a total value as close to 23 or -23 as possible without going over.
   
-  When a round begins, each player places initial bets and are dealt two cards. Players may then take turns either drawing an additional card or standing. The first four rounds of the game are the 'pot-building' phase, and no player may call the game at this time.
+  When a round begins, each player places initial bets and is dealt two cards. Players may then take turns either drawing an additional card or standing. The first four rounds of the game are the 'pot-building' phase, and no player may call the game at this time.After four rounds, any player may call the game. One final round of bets occurs, and then all players reveal their cards.
   
-  After four rounds, any player may call the game. One final round of bets occurs at this time, and then all players reveal their cards.
-  
-  If a player has a hand greater than 23, less than -23, or exactly 0 has 'bombed out' and loses the hand. The player with the closest hand to the absolute value of 23 wins the pot - and if they have exactly 23 or -23 (called 'Pure Sabacc'), they also win the Sabacc pot. However, if a player claims 'Pure Sabacc' and another player has the 'Idiot's Array' (an Idiot, a 2 of any suit, and a 3 of any suit), they beat the 'Pure Sabacc' and claim both the pot and the Sabacc pot.
+  Any player with a hand greater than 23, less than -23, or exactly 0 has 'bombed out' and loses the hand. The player with the closest hand to the absolute value of 23 wins the pot - and if they have exactly 23 or -23 (called 'Pure Sabacc'), they also win the Sabacc pot. However, if a player claims 'Pure Sabacc' and another player has the 'Idiot's Array' (an Idiot, a 2 of any suit, and a 3 of any suit), they beat the 'Pure Sabacc' and claim both the pot and the Sabacc pot.
   
   This version of Sabacc also has rules for 'Sabacc shift', which is a random occurence in which all players cards are randomized. We'll talk about that more in the conclusions section.
   
-#Theory
+# Theory
+> "Without precise calculations we could fly right through a star
+or bounce too close to a supernova, and that'd end your trip real quick,
+wouldn't it?"
 
-  I had a theory about Sabacc which I wanted to test. Since Blackjack is played against the dealer and Poker is played against other players, a game which mixes both might be capable of solution by statistical analysis. The key assumptions here are:
-  * A Sabacc player will **always** draw cards to improve their hand - either they are comfortable with their hand value or they are not.
-  * In Blackjack, you can infer the likely value of another player's hand simply based on the number of cards they have drawn. This is not useful in Blackjack since you are playing against the house - but in Sabacc *you are playing against other players*. We'll see later how this pays off.
+  I had a theory about Sabacc which I wanted to test. Since Blackjack is played against the dealer and Poker is played against other players, a game which mixes both might be capable of solution by statistical analysis. Or at least, I might be able to identify an optimal playing strategy. The key assumptions here are:
   
-Building the deck in Sabacc is not too difficult, but I broke it down into two parts. The first was constructing an array of values which correspond to the four suits of cards with value 1 to 15.
+  * A Sabacc player will **always** draw cards to improve their hand - either they are comfortable with their hand value or they are not.
+  
+  * If you know the value distribution of a deck, you may estimate the likely value of a player's hand based on the number of cards they have drawn. This is not usually useful for card games; in Blackjack you are playing against the house, and in Texas Hold 'Em players build their hands from community cards. In Sabacc, though, *you are playing your own unique hand against other players unique hands*. We'll see later why this is important.
+  
+Building the deck in Sabacc is done easily if you break it down into two parts. The first involves constructing an array of values which correspond to the four suits of cards with value 1 to 15.
 
 ```{r}
 suits1 <- c("Sabers", "Flasks", "Coins", "Staves")
@@ -56,7 +66,7 @@ deck1 <- cbind(deck1, val1)
 colnames(deck1) <- c("card", "suit", "val")
 ```
 
-Then I build the part of the deck which correspond to face cards with values ranging from 0 to -17. 
+Then build the part of the deck which correspond to face cards with values ranging from 0 to -17. 
 
 ```{r}
 suits2 <- c("Face", "Face")
@@ -76,15 +86,18 @@ deck2 <- cbind(deck2, val2)
 colnames(deck2) <- c("card", "suit", "val")
 ```
 
-Finally I simply binded each part of the deck together to yield our final Sabacc deck.
+Finally bind each part of the deck together to yield our final Sabacc deck.
 
 ```{r}
 deck <- rbind(deck1, deck2)
 
 remove(cards1, cards2, i, j, suits1, suits2, val1, val2, deck1, deck2)
+
+head(deck, 10)
 ```
 
-#Simulation
+# Running the simulation
+> "Never tell me the odds!"
 
 I thought it would be interesting to run a Monte Carlo simulation of draws from the Sabacc deck, and calculate the distribution of hand values for each additional card drawn. 
 
@@ -105,27 +118,28 @@ tot <- data.frame()
   }
 ```
 
-
-
-
 I then took the results from this simulation and plotted the probability distributions of the player's hand value by the number of cards they had drawn.
 
 ```{r}
 
 ggplot(tot, aes(x = val, fill = as.character(hand))) +
   geom_density(alpha = 0.2) +
-  geom_vline(xintercept = 27, linetype = "dashed", color = "red") + 
-  geom_vline(xintercept = -27, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = 23, linetype = "dashed", color = "red") + 
+  geom_vline(xintercept = -23, linetype = "dashed", color = "red") +
+  geom_text(aes(x = 23, label = "Val = 23", y = 0.05), color = "red", 
+            angle = 90, vjust = 1.2) +
+  geom_text(aes(x = -23, label = "Val = -23", y = 0.05), color = "red", 
+            angle = 90, vjust = 1.2) +
   labs(title = "Hand value likelihood by number of cards drawn in Sabacc",
        caption = "n = 10,000 hands",
        fill = "Cards drawn")
 
 ```
 
-
 Interesting! What we find is that a player is *most* likely to achieve 'Perfect Sabacc' after drawing only **three** cards. Four cards is still pretty likely, but not as much as three, and every card drawn after is less and less likely. 
 
-#Conclusion
+# Conclusion
+> "Great, kid, don't get cocky."
 
 What does this mean? A couple of things. 
 
@@ -134,7 +148,7 @@ First - Pure Sabacc is most likely to be achieved after **three** card draws, an
 Second (and perhaps most importantly) - you should **never** try to play for a negative Pure Sabacc. The approximate likelihood of achieving a hand value of -23 is easily given by 
 
 ```{r}
-neg_sabacc <- count(tot, val == -27)
+neg_sabacc <- count(tot, val == -23)
 
 prob_neg_sabacc <- neg_sabacc[2, 2]/uplim
 
@@ -142,3 +156,53 @@ prob_neg_sabacc
 ```
 
 Third - since **these distributions are applicable to every player at the table**, you can use this information to predict other player's hand value. The best part? *A Sabacc shift is just resampling of the same number of cards without replacement.* This means that even if (perhaps *especially* if) a Sabacc shift occurs, you can still estimate the value of an opponent player's hand based on the number of cards they're holding.
+
+# Addendum: the Idiot's Array
+> "Look, good against remotes is one thing. Good against the living; that's something else."
+
+So lets suppose you do manage to get a Pure Sabacc - the best hand in the game. The chances of drawing a Pure Sabacc are given by
+
+```{r}
+pure_sabacc <- count(tot, val == -23 | val == 23)
+
+prob_pure_sabacc <- pure_sabacc[2, 2]/uplim
+
+prob_pure_sabacc
+```
+
+You're now guaranteed to win or split the hand - unless someone else is holding onto an Idiot's Array. The Idiot's Array is one Idiot (with a value of 0), one 2 of any suit, and one 3 of any suit. The Idiot's Array is *not* exclusive - you could have any number of cards in your hand and as long as they contain the Idiot's Array, you coud play that against a Pure Sabacc.
+
+What does this mean? For starters, we should expect the likelihood of an Idiot's Array being drawn to grow as more cards are drawn. Compare this against what we already know - that the odds of drawing a Pure Sabacc diminish with additional draws. Lets run the simulation again, but instead of calculating hand value, we're going to truth-test the composition of an Idiot's Array against the composition of each hand
+
+```{r}
+uplim <- 5
+handlim <- 3
+ia <- c("Idiot", "Two", "Three")
+tot <- matrix(ncol = handlim)
+test <- matrix(ncol = 3)
+
+for(i in 1:uplim){
+  draw <- deck[sample(nrow(deck), handlim, replace = FALSE), 1]
+  tot <- rbind(tot, as.character(draw))
+}
+tot <- tot[-1, ]
+
+for(i in 1:uplim){
+  test <- rbind(test, ia %in% tot[i, ])
+}
+test <- test[-1, ]
+tot <- cbind(test, tot)
+colnames(tot) <- c("Idiot", "Two", "Three", "1", "2", "3")
+tot
+```
+
+The first three columns returned are the truth tests for whether the hand contains each necessary card in the Idiot's Array. We can iterate this test for each additional card drawn in a hand and record the probability of the Idiot's Array occuring:
+
+```{r}
+
+kable(truthtable, digits = 4,
+      caption = "Probability of holding an Idiot's Array by number of cards drawn")
+
+```
+
+![](lando.jpg)
