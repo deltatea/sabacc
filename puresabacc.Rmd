@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(stats)
 library(knitr)
+library(janitor)
 ```
 
 
@@ -23,7 +24,7 @@ Or is it?
 I set out to build this analysis after thinking about an assignment from my undergraduate days. In that class (PHY 315: Computational Physics), one of our first projects was to build a simulation of the cardgame Blackjack. Back then, the functional simulation was as far as we went. But I thought it would be fun to try my hand (*heh*) at iterating a Sabacc simulation and see if there's any insight to be gained.
 
 # Sabacc Rules
-> It's not wise to upset a Wookie.
+> "It's not wise to upset a Wookie.""
 
 We're going to use the standard rules for Sabacc as published on http://sabacc.sourceforge.net/rules. Here's a quick breakdown of how it works:
   
@@ -136,7 +137,7 @@ ggplot(tot, aes(x = val, fill = as.character(hand))) +
 
 ```
 
-Interesting! What we find is that a player is *most* likely to achieve 'Perfect Sabacc' after drawing only **three** cards. Four cards is still pretty likely, but not as much as three, and every card drawn after is less and less likely. 
+Interesting! What we find is that a player is *most* likely to achieve 'Perfect Sabacc' after drawing only **three** cards. Four cards is still pretty likely, but not as much as three, and every additional card drawn after is less and less likely. 
 
 # Conclusion
 > "Great, kid, don't get cocky."
@@ -193,16 +194,42 @@ for(i in 1:uplim){
 test <- test[-1, ]
 tot <- cbind(test, tot)
 colnames(tot) <- c("Idiot", "Two", "Three", "1", "2", "3")
-tot
+tot[1, ]
 ```
 
 The first three columns returned are the truth tests for whether the hand contains each necessary card in the Idiot's Array. We can iterate this test for each additional card drawn in a hand and record the probability of the Idiot's Array occuring:
 
-```{r}
+```{r, include = FALSE}
+truthtable <- matrix(c(0), nrow=9, ncol=2)
+truthtable[1, ] <- c(1, 0)
+truthtable[2, ] <- c(2, 0)
+truthtable[3, ] <- c(3, 2/uplim)
+truthtable[4, ] <- c(4, 15/uplim)
+truthtable[5, ] <- c(5, 40/uplim)
+truthtable[6, ] <- c(6, 92/uplim)
+truthtable[7, ] <- c(7, 136/uplim)
+truthtable[8, ] <- c(8, 207/uplim)
+truthtable[9, ] <- c(9, 288/uplim)
 
-kable(truthtable, digits = 4,
+colnames(truthtable) <- c("Hand", "Approx. Probability")
+
+kable(truthtable,
       caption = "Probability of holding an Idiot's Array by number of cards drawn")
 
 ```
+
+What's the takeaway from this? If you get a Pure Sabacc, you better call the hand pretty quick! As we can see the likelihood of an Idiot's Array being drawn gets pretty high after only 5 cards. So a Sabacc player who wants to apply what we've learned here should probably:
+
+ * Never try to chase a negative Pure Sabacc
+ * Stand at least once during the pot-building phase
+ * With a hand value under Pure Sabacc, call the hand as soon as it's likely that most players have 'bombed out'.
+ * With Pure Sabacc, *only* call the hand if it's early enough to avoid an Idiot's Array.
+ 
+Of course, all of this assumes a level playing field from every player involved. And Sabacc is nothing if not known for its cheaters and swindlers. 
+
+I hope you enjoyed this analysis - I had a lot of fun thinking about it and putting the pieces together. If you have any comments or recommendations, please feel free to reach out to me at via Twitter or on Wordpress.
+
+Fly casual!
+-Carter
 
 ![](lando.jpg)
